@@ -7,33 +7,36 @@
 #include <tgbot/tgbot.h>
 #include <thread>
 #pragma warning(disable : 4996)
+
 using namespace std;
 using namespace TgBot;
 
+bool checkingDevice = true;
+
 bool pingDevice(const string& device) {
 #ifdef _WIN32
-    string command = "ping -n 1 " + device;  // Для Windows
+    string command = "ping -n 1 " + device;  // Р”Р»СЏ Windows
 #else
-    string command = "ping -c 1 " + device; // Для Linux и Mac
+    string command = "ping -c 1 " + device; // Р”Р»СЏ Linux Рё Mac
 #endif
     int result = system(command.c_str());
     return result == 0;
 }
-bool checkingDevice = true;
+
 
 void logIncident(string& ipAdress, string& status);
-
-void pingFunction(Bot& bot, string& deviceIP, Message::Ptr message) {
+string deviceIP;
+void pingFunction(Bot& bot, Message::Ptr message, const string& ip) {
     setlocale(LC_ALL, "RUS");
     int i = 0;
-    // Бесконечный цикл для проверки доступности устройства
+    // Р‘РµСЃРєРѕРЅРµС‡РЅС‹Р№ С†РёРєР» РґР»СЏ РїСЂРѕРІРµСЂРєРё РґРѕСЃС‚СѓРїРЅРѕСЃС‚Рё СѓСЃС‚СЂРѕР№СЃС‚РІР°
     while (checkingDevice) {
         try {
             auto start = chrono::system_clock::now();
             if (pingDevice(deviceIP)) {
                 if (i > 0) {
                     i = 0;
-                    string status = u8"Подключение восстановлено";
+                    string status = u8"РџРѕРґРєР»СЋС‡РµРЅРёРµ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРѕ";
                     bot.getApi().sendMessage(message->chat->id, status);
                     logIncident(deviceIP, status);
                 }
@@ -43,7 +46,7 @@ void pingFunction(Bot& bot, string& deviceIP, Message::Ptr message) {
                 cout << to_string(elapsedTime.count());
                 if (elapsedTime > delayTime) {
                     i++;
-                    string status = u8"Снизилась скорость передачи пакетов";
+                    string status = u8"РЎРЅРёР·РёР»Р°СЃСЊ СЃРєРѕСЂРѕСЃС‚СЊ РїРµСЂРµРґР°С‡Рё РїР°РєРµС‚РѕРІ";
                     if (i <= 1) {
 
                         cout << endl << status << endl;
@@ -58,18 +61,18 @@ void pingFunction(Bot& bot, string& deviceIP, Message::Ptr message) {
             else {
                 i++;
                 if (i <= 1) {
-                    string status = "Не отвечает";
-                    cout << endl << "Устройство не отвечает " << i << "минуту" << endl;
-                    bot.getApi().sendMessage(message->chat->id, u8"Устройство недоступно!");
+                    string status = u8"РќРµ РѕС‚РІРµС‡Р°РµС‚";
+                    cout << endl << "РЈСЃС‚СЂРѕР№СЃС‚РІРѕ РЅРµ РѕС‚РІРµС‡Р°РµС‚ " << i << "РјРёРЅСѓС‚Сѓ" << endl;
+                    bot.getApi().sendMessage(message->chat->id, u8"РЈСЃС‚СЂРѕР№СЃС‚РІРѕ РЅРµРґРѕСЃС‚СѓРїРЅРѕ!");
                     logIncident(deviceIP, status);
                 }
                 else {
-                    cout << endl << "Устройство не отвечает " << i << "минуту" << endl;
-                    bot.getApi().sendMessage(message->chat->id, u8"Устройство недоступно!");
+                    cout << endl << "РЈСЃС‚СЂРѕР№СЃС‚РІРѕ РЅРµ РѕС‚РІРµС‡Р°РµС‚ " << i << "РјРёРЅСѓС‚Сѓ" << endl;
+                    bot.getApi().sendMessage(message->chat->id, u8"РЈСЃС‚СЂРѕР№СЃС‚РІРѕ РЅРµРґРѕСЃС‚СѓРїРЅРѕ!");
                 }
             }
 
-            // Пауза в 60 секунд перед следующей проверкой
+            // РџР°СѓР·Р° РІ 60 СЃРµРєСѓРЅРґ РїРµСЂРµРґ СЃР»РµРґСѓСЋС‰РµР№ РїСЂРѕРІРµСЂРєРѕР№
             this_thread::sleep_for(chrono::seconds(60));
         }
         catch (exception& e) {
@@ -80,9 +83,9 @@ void pingFunction(Bot& bot, string& deviceIP, Message::Ptr message) {
 
 
 static int callback(void* data, int argc, char** argv, char** azColName) {
-    ofstream outputFile("incidents.csv"); // Создаем файл для записи данных таблицы
+    ofstream outputFile("incidents.csv"); // РЎРѕР·РґР°РµРј С„Р°Р№Р» РґР»СЏ Р·Р°РїРёСЃРё РґР°РЅРЅС‹С… С‚Р°Р±Р»РёС†С‹
 
-    // Записываем заголовки столбцов
+    // Р—Р°РїРёСЃС‹РІР°РµРј Р·Р°РіРѕР»РѕРІРєРё СЃС‚РѕР»Р±С†РѕРІ
     for (int i = 0; i < argc; i++) {
         outputFile << azColName[i];
         if (i < argc - 1) {
@@ -91,7 +94,7 @@ static int callback(void* data, int argc, char** argv, char** azColName) {
     }
     outputFile << endl;
 
-    // Записываем данные таблицы
+    // Р—Р°РїРёСЃС‹РІР°РµРј РґР°РЅРЅС‹Рµ С‚Р°Р±Р»РёС†С‹
     for (int i = 0; i < argc; i++) {
         outputFile << argv[i];
         if (i < argc - 1) {
@@ -105,26 +108,26 @@ static int callback(void* data, int argc, char** argv, char** azColName) {
     return 0;
 }
 
-// Функция для получения данных из базы данных и записи их в файл
+// Р¤СѓРЅРєС†РёСЏ РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ РґР°РЅРЅС‹С… РёР· Р±Р°Р·С‹ РґР°РЅРЅС‹С… Рё Р·Р°РїРёСЃРё РёС… РІ С„Р°Р№Р»
 void getDataFromDatabase() {
-    // Открываем соединение с базой данных
+    // РћС‚РєСЂС‹РІР°РµРј СЃРѕРµРґРёРЅРµРЅРёРµ СЃ Р±Р°Р·РѕР№ РґР°РЅРЅС‹С…
     sqlite3* db;
     int rc = sqlite3_open("incidents.db", &db);
     if (rc) {
-        cerr << "Ошибка при открытии базы данных: " << sqlite3_errmsg(db) << endl;
+        cerr << "РћС€РёР±РєР° РїСЂРё РѕС‚РєСЂС‹С‚РёРё Р±Р°Р·С‹ РґР°РЅРЅС‹С…: " << sqlite3_errmsg(db) << endl;
         return;
     }
 
-    // Выполняем SQL-запрос для получения данных из таблицы
+    // Р’С‹РїРѕР»РЅСЏРµРј SQL-Р·Р°РїСЂРѕСЃ РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ РґР°РЅРЅС‹С… РёР· С‚Р°Р±Р»РёС†С‹
     string sql = "SELECT * FROM incidents;";
     rc = sqlite3_exec(db, sql.c_str(), callback, nullptr, nullptr);
     if (rc != SQLITE_OK) {
-        cerr << "Ошибка при выполнении SQL-запроса: " << sqlite3_errmsg(db) << endl;
+        cerr << "РћС€РёР±РєР° РїСЂРё РІС‹РїРѕР»РЅРµРЅРёРё SQL-Р·Р°РїСЂРѕСЃР°: " << sqlite3_errmsg(db) << endl;
         sqlite3_close(db);
         return;
     }
 
-    // Закрываем соединение с базой данных
+    // Р—Р°РєСЂС‹РІР°РµРј СЃРѕРµРґРёРЅРµРЅРёРµ СЃ Р±Р°Р·РѕР№ РґР°РЅРЅС‹С…
     sqlite3_close(db);
 }
 void logIncident(string& ipAdress, string& status) {
@@ -144,52 +147,61 @@ void logIncident(string& ipAdress, string& status) {
     sqlite3_close(db);
 }
 int main() {
-    // Инициализируем бота
+    // РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј Р±РѕС‚Р°
     Bot bot("YOUR TOKEN");
     string chatId;
     // /start
     bot.getEvents().onCommand("start", [&bot](Message::Ptr message) {
         checkingDevice = true;
-    bot.getApi().sendMessage(message->chat->id, u8"Добро пожаловать. Вот - краткая инструкция по командам:\n"
-        u8"/help - показать список команд\n"
-        u8"/ping - пинговать устройство, необходимо вводить '/ping ip-adress'. Вводить сразу, а не отправлять потом, иначе бот вылетит.\n"
-        u8"/stop - остановить пинг\n"
-        u8"/download - скачать таблицу incidents");
+    bot.getApi().sendMessage(message->chat->id, u8"Р”РѕР±СЂРѕ РїРѕР¶Р°Р»РѕРІР°С‚СЊ. Р’РѕС‚ - РєСЂР°С‚РєР°СЏ РёРЅСЃС‚СЂСѓРєС†РёСЏ РїРѕ РєРѕРјР°РЅРґР°Рј:\n"
+        u8"/help - РїРѕРєР°Р·Р°С‚СЊ СЃРїРёСЃРѕРє РєРѕРјР°РЅРґ\n"
+        u8"/ping - РїРёРЅРіРѕРІР°С‚СЊ СѓСЃС‚СЂРѕР№СЃС‚РІРѕ, РЅРµРѕР±С…РѕРґРёРјРѕ РІРІРѕРґРёС‚СЊ '/ping ip-adress'. Р’РІРѕРґРёС‚СЊ СЃСЂР°Р·Сѓ, Р° РЅРµ РѕС‚РїСЂР°РІР»СЏС‚СЊ РїРѕС‚РѕРј, РёРЅР°С‡Рµ Р±РѕС‚ РІС‹Р»РµС‚РёС‚.\n"
+        u8"/stop - РѕСЃС‚Р°РЅРѕРІРёС‚СЊ РїРёРЅРі\n"
+        u8"/download - СЃРєР°С‡Р°С‚СЊ С‚Р°Р±Р»РёС†Сѓ incidents");
         });
 
     // /stop
     bot.getEvents().onCommand("stop", [&bot](Message::Ptr message) {
         checkingDevice = false;
-    bot.getApi().sendMessage(message->chat->id, u8"Ping остановлен");
+    bot.getApi().sendMessage(message->chat->id, u8"Ping РѕСЃС‚Р°РЅРѕРІР»РµРЅ");
     checkingDevice = true;
         });
     // /help
     bot.getEvents().onCommand("help", [&bot](Message::Ptr message) {
-        bot.getApi().sendMessage(message->chat->id, u8"Список доступных команд:\n"
-        u8"/help - показать список команд\n"
-            u8"/ping - пинговать устройство\n"
-            u8"/stop - остановить пингование\n"
-            u8"/download - скачать таблицу incidents");
+        bot.getApi().sendMessage(message->chat->id, u8"РЎРїРёСЃРѕРє РґРѕСЃС‚СѓРїРЅС‹С… РєРѕРјР°РЅРґ:\n"
+        u8"/help - РїРѕРєР°Р·Р°С‚СЊ СЃРїРёСЃРѕРє РєРѕРјР°РЅРґ\n"
+            u8"/ping - РїРёРЅРіРѕРІР°С‚СЊ СѓСЃС‚СЂРѕР№СЃС‚РІРѕ\n"
+            u8"/stop - РѕСЃС‚Р°РЅРѕРІРёС‚СЊ РїРёРЅРіРѕРІР°РЅРёРµ\n"
+            u8"/download - СЃРєР°С‡Р°С‚СЊ С‚Р°Р±Р»РёС†Сѓ incidents");
         });
     // /statistic
     bot.getEvents().onCommand("download", [&bot](Message::Ptr message) {
-        // Получаем данные из базы данных и записываем их в файл
+        // РџРѕР»СѓС‡Р°РµРј РґР°РЅРЅС‹Рµ РёР· Р±Р°Р·С‹ РґР°РЅРЅС‹С… Рё Р·Р°РїРёСЃС‹РІР°РµРј РёС… РІ С„Р°Р№Р»
         getDataFromDatabase();
-    // Отправляем файл с данными таблицы пользователю
+    // РћС‚РїСЂР°РІР»СЏРµРј С„Р°Р№Р» СЃ РґР°РЅРЅС‹РјРё С‚Р°Р±Р»РёС†С‹ РїРѕР»СЊР·РѕРІР°С‚РµР»СЋ
     bot.getApi().sendDocument(message->chat->id, InputFile::fromFile("incidents.csv", "cvs"));
         });
     // /ping
     bot.getEvents().onCommand("ping", [&bot](Message::Ptr message) {
-        //bot.getApi().sendMessage(message->chat->id, u8"Введите Ip-адресс устройства:");
+
+       // bot.getApi().sendMessage(message->chat->id, u8"Р’РІРµРґРёС‚Рµ Ip-Р°РґСЂРµСЃСЃ СѓСЃС‚СЂРѕР№СЃС‚РІР°:");
         //bot.getEvents().onAnyMessage([&bot](Message::Ptr message) {
-        string deviceIP = message->text.substr(6);
-    bot.getApi().sendMessage(message->chat->id, u8"Автоматический контроль за устройством по адресу: " + deviceIP + u8" запущен.\n Чтобы его остановить воспользуйтесь командой /stop");
-    // Запуск функции в отдельном потоке
-    thread pingThread(pingFunction, ref(bot), ref(deviceIP), message);
-    pingThread.detach();
+        try {
+            deviceIP = message->text.substr(6);
+        }
+        catch (exception& e){
+            cout << "Bot erorr: " << e.what();
+            bot.getApi().sendMessage(message->chat->id, u8"Р’С‹ РЅРµРєРѕСЂСЂРµРєС‚РЅРѕ РІРІРµР»Рё ip Р°РґСЂРµСЃ. РџРѕРІС‚РѕСЂРёС‚Рµ РІРІРѕРґ РїРѕ С€Р°Р±Р»РѕРЅСѓ '/ping ip.adress'");
+            return;
+        }
+        
+        bot.getApi().sendMessage(message->chat->id, u8"РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРёР№ РєРѕРЅС‚СЂРѕР»СЊ Р·Р° СѓСЃС‚СЂРѕР№СЃС‚РІРѕРј РїРѕ Р°РґСЂРµСЃСѓ: " + deviceIP + u8" Р·Р°РїСѓС‰РµРЅ.\n Р§С‚РѕР±С‹ РµРіРѕ РѕСЃС‚Р°РЅРѕРІРёС‚СЊ РІРѕСЃРїРѕР»СЊР·СѓР№С‚РµСЃСЊ РєРѕРјР°РЅРґРѕР№ /stop");
+    // Р—Р°РїСѓСЃРє С„СѓРЅРєС†РёРё РІ РѕС‚РґРµР»СЊРЅРѕРј РїРѕС‚РѕРєРµ
+        thread pingThread(pingFunction, ref(bot), message, deviceIP);
+        pingThread.detach();
     //});
-        });
-    // Запускаем бота
+    });
+    // Р—Р°РїСѓСЃРєР°РµРј Р±РѕС‚Р°
     try {
         cout << "Bot username: " << bot.getApi().getMe()->username << endl;
         TgLongPoll longPoll(bot);
@@ -198,7 +210,7 @@ int main() {
         }
     }
     catch (exception& e) {
-        cout << "Bot error: " << e.what() << endl;
+        cout << "Bot error: " << e.what() << endl << "chatId:" << chatId << endl;
     }
 
     return 0;
