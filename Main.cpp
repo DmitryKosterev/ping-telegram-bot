@@ -61,7 +61,10 @@ void pingFunction(Bot& bot, Message::Ptr message, const string& ip) {
             else {
                 i++;
                 if (i <= 1) {
+
+
                     string status = u8"Не отвечает";
+
                     cout << endl << "Устройство не отвечает " << i << "минуту" << endl;
                     bot.getApi().sendMessage(message->chat->id, u8"Устройство недоступно!");
                     logIncident(deviceIP, status);
@@ -184,23 +187,16 @@ int main() {
     // /ping
     bot.getEvents().onCommand("ping", [&bot](Message::Ptr message) {
 
-       // bot.getApi().sendMessage(message->chat->id, u8"Введите Ip-адресс устройства:");
+        //bot.getApi().sendMessage(message->chat->id, u8"Введите Ip-адресс устройства:");
         //bot.getEvents().onAnyMessage([&bot](Message::Ptr message) {
-        try {
-            deviceIP = message->text.substr(6);
-        }
-        catch (exception& e){
-            cout << "Bot erorr: " << e.what();
-            bot.getApi().sendMessage(message->chat->id, u8"Вы некорректно ввели ip адрес. Повторите ввод по шаблону '/ping ip.adress'");
-            return;
-        }
-        
-        bot.getApi().sendMessage(message->chat->id, u8"Автоматический контроль за устройством по адресу: " + deviceIP + u8" запущен.\n Чтобы его остановить воспользуйтесь командой /stop");
+        string deviceIP = message->text.substr(6);
+    bot.getApi().sendMessage(message->chat->id, u8"Автоматический контроль за устройством по адресу: " + deviceIP + u8" запущен.\n Чтобы его остановить воспользуйтесь командой /stop");
     // Запуск функции в отдельном потоке
-        thread pingThread(pingFunction, ref(bot), message, deviceIP);
-        pingThread.detach();
+    thread pingThread(pingFunction, ref(bot), ref(deviceIP), message);
+    pingThread.detach();
     //});
-    });
+        });
+
     // Запускаем бота
     try {
         cout << "Bot username: " << bot.getApi().getMe()->username << endl;
