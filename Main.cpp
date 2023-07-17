@@ -7,8 +7,11 @@
 #include <tgbot/tgbot.h>
 #include <thread>
 #pragma warning(disable : 4996)
+
 using namespace std;
 using namespace TgBot;
+
+bool checkingDevice = true;
 
 bool pingDevice(const string& device) {
 #ifdef _WIN32
@@ -19,11 +22,11 @@ bool pingDevice(const string& device) {
     int result = system(command.c_str());
     return result == 0;
 }
-bool checkingDevice = true;
+
 
 void logIncident(string& ipAdress, string& status);
-
-void pingFunction(Bot& bot, string& deviceIP, Message::Ptr message) {
+string deviceIP;
+void pingFunction(Bot& bot, Message::Ptr message, const string& ip) {
     setlocale(LC_ALL, "RUS");
     int i = 0;
     // Бесконечный цикл для проверки доступности устройства
@@ -58,7 +61,10 @@ void pingFunction(Bot& bot, string& deviceIP, Message::Ptr message) {
             else {
                 i++;
                 if (i <= 1) {
-                    string status = "Не отвечает";
+
+
+                    string status = u8"Не отвечает";
+
                     cout << endl << "Устройство не отвечает " << i << "минуту" << endl;
                     bot.getApi().sendMessage(message->chat->id, u8"Устройство недоступно!");
                     logIncident(deviceIP, status);
@@ -180,6 +186,7 @@ int main() {
         });
     // /ping
     bot.getEvents().onCommand("ping", [&bot](Message::Ptr message) {
+
         //bot.getApi().sendMessage(message->chat->id, u8"Введите Ip-адресс устройства:");
         //bot.getEvents().onAnyMessage([&bot](Message::Ptr message) {
         string deviceIP = message->text.substr(6);
@@ -189,6 +196,7 @@ int main() {
     pingThread.detach();
     //});
         });
+
     // Запускаем бота
     try {
         cout << "Bot username: " << bot.getApi().getMe()->username << endl;
@@ -198,7 +206,7 @@ int main() {
         }
     }
     catch (exception& e) {
-        cout << "Bot error: " << e.what() << endl;
+        cout << "Bot error: " << e.what() << endl << "chatId:" << chatId << endl;
     }
 
     return 0;
