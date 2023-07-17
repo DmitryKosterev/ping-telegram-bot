@@ -1,4 +1,3 @@
-#include <iostream>
 #include <string>
 #include <cstdlib>
 #include <chrono>
@@ -6,18 +5,33 @@
 #include <sqlite3.h>
 #include <tgbot/tgbot.h>
 #include <thread>
+#include <unordered_map>
+#include <atomic>
+
 #pragma warning(disable : 4996)
 
 using namespace std;
 using namespace TgBot;
 
-bool checkingDevice = true;
+// Количество запущенных потоков
+int numThreads = 0;
+
+// Мапа для хранения всех запущенных потоков
+unordered_map<int, thread> threads;
+
+// Массив флагов для остановки каждого потока
+atomic<bool> stopFlags[10];
+
+// Мапа для хранения соответствия между чат айди и номером потока
+unordered_map<long long, int> chatToThread;
+
+string deviceIP;
 
 bool pingDevice(const string& device) {
 #ifdef _WIN32
-    string command = "ping -n 1 " + device;  // Для Windows
+    string command = "ping -n 1 " + device;  // для Windows
 #else
-    string command = "ping -c 1 " + device; // Для Linux и Mac
+    string command = "ping -c 1 " + device; // для Linux и Mac
 #endif
     int result = system(command.c_str());
     return result == 0;
@@ -25,12 +39,12 @@ bool pingDevice(const string& device) {
 
 
 void logIncident(string& ipAdress, string& status);
-string deviceIP;
-void pingFunction(Bot& bot, Message::Ptr message, const string& ip) {
+
+void pingFunction(Bot& bot, Message::Ptr message, const string& ip, int threadNum, atomic<bool>& stopFlag) {
     setlocale(LC_ALL, "RUS");
     int i = 0;
     // Бесконечный цикл для проверки доступности устройства
-    while (checkingDevice) {
+    while (!stopFlag) {
         try {
             auto start = chrono::system_clock::now();
             if (pingDevice(deviceIP)) {
@@ -64,13 +78,13 @@ void pingFunction(Bot& bot, Message::Ptr message, const string& ip) {
 
 
                     string status = u8"Не отвечает";
-
-                    cout << endl << "Устройство не отвечает " << i << "минуту" << endl;
-                    bot.getApi().sendMessage(message->chat->id, u8"Устройство недоступно!");
                     logIncident(deviceIP, status);
+                    cout << endl << "Устройство не отвечает " << i << " минуту" << endl;
+                    bot.getApi().sendMessage(message->chat->id, u8"Устройство недоступно!");
+                    
                 }
                 else {
-                    cout << endl << "Устройство не отвечает " << i << "минуту" << endl;
+                    cout << endl << "Устройство не отвечает " << i << " минут(ы)" << endl;
                     bot.getApi().sendMessage(message->chat->id, u8"Устройство недоступно!");
                 }
             }
@@ -79,11 +93,44 @@ void pingFunction(Bot& bot, Message::Ptr message, const string& ip) {
             this_thread::sleep_for(chrono::seconds(60));
         }
         catch (exception& e) {
-            //cout << "Ping: " << e.what() << endl;
+            cout << "Ping: " << e.what() << endl;
         }
     }
 }
 
+//  /ping
+void handleStartPingCommand(Bot& bot, Message::Ptr message) {
+    // создание нового потока и добавление его номера в мапу
+    try {
+        deviceIP = message->text.substr(6);
+        bot.getApi().sendMessage(message->chat->id, u8"Автоматический контроль за устройством по адресу: " + deviceIP + u8" запущен.\n Чтобы его остановить воспользуйтесь командой /stop");
+        int threadNum = numThreads++;
+        threads[threadNum] = thread(pingFunction, ref(bot), message, deviceIP, threadNum, ref(stopFlags[threadNum]));
+        // связь chatId с номером потока
+        chatToThread[message->chat->id] = threadNum;
+    }
+    catch (exception& e) {
+        cout << "Bot: " << e.what() << endl;
+        bot.getApi().sendMessage(message->chat->id, u8"������� �� ������� '/ping ip_adress'");
+    }
+}
+
+// /stop
+void handleStopPingCommand(Bot& bot, Message::Ptr message) {
+    // получение номера потока из мапы и установка флага остановки для этого потока
+    if (chatToThread.count(message->chat->id) > 0) {
+        int threadNum = chatToThread[message->chat->id];
+        stopFlags[threadNum] = true;
+        threads[threadNum].join();
+        threads.erase(threadNum);
+        chatToThread.erase(message->chat->id);
+        cout << endl << "Thread " + to_string(threadNum) + " stopped" << endl;
+        bot.getApi().sendMessage(message->chat->id, u8"Выполнение команды '/ping' прекращено");
+    }
+    else {
+        bot.getApi().sendMessage(message->chat->id, u8"Команда '/ping' не была запущена");
+    }
+}
 
 static int callback(void* data, int argc, char** argv, char** azColName) {
     ofstream outputFile("incidents.csv"); // Создаем файл для записи данных таблицы
@@ -133,6 +180,7 @@ void getDataFromDatabase() {
     // Закрываем соединение с базой данных
     sqlite3_close(db);
 }
+// Функция для записи в файл
 void logIncident(string& ipAdress, string& status) {
     sqlite3* db;
     int rc = sqlite3_open("incidents.db", &db);
@@ -146,29 +194,23 @@ void logIncident(string& ipAdress, string& status) {
     if (rc != SQLITE_OK) {
         cout << "SQL error: " << sqlite3_errmsg(db) << endl;
     }
-
     sqlite3_close(db);
 }
 int main() {
     // Инициализируем бота
-    Bot bot("YOUR TOKEN");
+    Bot bot("6338517569:AAFhOjUsqB3zUG-vMGvWHje-gAqSOiU8v2Y");
     string chatId;
+    setlocale(LC_ALL, "RUS");
     // /start
     bot.getEvents().onCommand("start", [&bot](Message::Ptr message) {
-        checkingDevice = true;
-    bot.getApi().sendMessage(message->chat->id, u8"Добро пожаловать. Вот - краткая инструкция по командам:\n"
+        bot.getApi().sendMessage(message->chat->id, u8"Добро пожаловать. Вот - краткая инструкция по командам:\n"
         u8"/help - показать список команд\n"
-        u8"/ping - пинговать устройство, необходимо вводить '/ping ip-adress'. Вводить сразу, а не отправлять потом, иначе бот вылетит.\n"
-        u8"/stop - остановить пинг\n"
-        u8"/download - скачать таблицу incidents");
+            u8"/ping - пинговать устройство, необходимо вводить '/ping ip-adress'. Вводить сразу, а не отправлять потом, иначе бот вылетит.\n"
+            u8"/stop - остановить пинг\n"
+            u8"/download - скачать таблицу incidents"
+        );
         });
 
-    // /stop
-    bot.getEvents().onCommand("stop", [&bot](Message::Ptr message) {
-        checkingDevice = false;
-    bot.getApi().sendMessage(message->chat->id, u8"Ping остановлен");
-    checkingDevice = true;
-        });
     // /help
     bot.getEvents().onCommand("help", [&bot](Message::Ptr message) {
         bot.getApi().sendMessage(message->chat->id, u8"Список доступных команд:\n"
@@ -185,17 +227,10 @@ int main() {
     bot.getApi().sendDocument(message->chat->id, InputFile::fromFile("incidents.csv", "cvs"));
         });
     // /ping
-    bot.getEvents().onCommand("ping", [&bot](Message::Ptr message) {
+    bot.getEvents().onCommand("ping", bind(handleStartPingCommand, ref(bot), placeholders::_1));
+    // /stop
+    bot.getEvents().onCommand("stop", bind(handleStopPingCommand, ref(bot), placeholders::_1));
 
-        //bot.getApi().sendMessage(message->chat->id, u8"Введите Ip-адресс устройства:");
-        //bot.getEvents().onAnyMessage([&bot](Message::Ptr message) {
-        string deviceIP = message->text.substr(6);
-    bot.getApi().sendMessage(message->chat->id, u8"Автоматический контроль за устройством по адресу: " + deviceIP + u8" запущен.\n Чтобы его остановить воспользуйтесь командой /stop");
-    // Запуск функции в отдельном потоке
-    thread pingThread(pingFunction, ref(bot), ref(deviceIP), message);
-    pingThread.detach();
-    //});
-        });
 
     // Запускаем бота
     try {
