@@ -81,7 +81,6 @@ void pingFunction(Bot& bot, Message::Ptr message, const string& ip, int threadNu
                     logIncident(deviceIP, status);
                     cout << endl << "Устройство не отвечает " << i << " минуту" << endl;
                     bot.getApi().sendMessage(message->chat->id, u8"Устройство недоступно!");
-
                 }
                 else {
                     cout << endl << "Устройство не отвечает " << i << " минут(ы)" << endl;
