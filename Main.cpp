@@ -413,8 +413,7 @@ int main() {
                 return;
             }
         }
-
-        // Остальная логика обработки сообщений...
+        bot.getApi().sendMessage(chatId, "⚠️ К сожалению, команда не распознана.");
         });
     try {
         TgLongPoll longPoll(bot);
@@ -430,5 +429,3 @@ int main() {
     dispatcherThread.join();
     return 0;
 }
-
- //"6338517569:AAF5WRHNL00b26aNP1NAroT0T5omOY-n6dw");
