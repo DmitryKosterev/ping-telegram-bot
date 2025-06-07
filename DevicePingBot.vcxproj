@@ -127,7 +127,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="db.cpp" />
+    <ClCompile Include="dispatcher.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="ping.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="draw_graph.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="db.hpp" />
+    <ClInclude Include="dispatcher.hpp" />
+    <ClInclude Include="ping.hpp" />
+    <ClInclude Include="ping_session.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
